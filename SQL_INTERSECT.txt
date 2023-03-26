@@ -1,0 +1,53 @@
+WITH A AS
+(WITH 
+page_view AS (SELECT dimension4, MIN(dateHourMinute) AS page_fst_date FROM `m2-main.UA_REPORTS.PAGE_VIEWS` 
+WHERE REGEXP_CONTAINS(pagepath, r'(/rieltoram/placement)') GROUP BY 1),
+
+sessions AS (SELECT  user_id, session_id FROM `m2-main.TEST_MART.SESSIONS_TABLE ` GROUP BY 1,2),
+
+user AS (SELECT dimension1, dimension2 FROM `m2-main.UA_REPORTS.USERS` GROUP BY 1,2),
+
+pg_reg AS (SELECT user_code, report_datetime  FROM  `m2-main.EXTERNAL_DATA_SOURCES.PG_ALL_REGISTRATIONS` 
+WHERE role LIKE '%PROFESSIONAL%' AND report_type = 'Зарегистрированный пользователь (установлен пароль)')
+
+
+SELECT
+user_code
+FROM
+page_view LEFT JOIN 
+sessions ON dimension4 = session_id LEFT JOIN
+user ON user_id = dimension1 LEFT JOIN 
+pg_reg ON  dimension2 = user_code
+WHERE page_fst_date < report_datetime AND EXTRACT(YEAR FROM report_datetime) = 2022 AND EXTRACT(MONTH FROM report_datetime) = 4
+GROUP BY 1),
+
+B AS
+
+
+(WITH 
+page_view AS (SELECT dimension4, MIN(dateHourMinute) AS page_fst_date FROM `m2-main.UA_REPORTS.PAGE_VIEWS` 
+WHERE REGEXP_CONTAINS(pagepath, r'(/rieltors)') GROUP BY 1),
+
+sessions AS (SELECT  user_id, session_id FROM `m2-main.TEST_MART.SESSIONS_TABLE ` GROUP BY 1,2),
+
+user AS (SELECT dimension1, dimension2 FROM `m2-main.UA_REPORTS.USERS` GROUP BY 1,2),
+
+pg_reg AS (SELECT user_code, report_datetime  FROM  `m2-main.EXTERNAL_DATA_SOURCES.PG_ALL_REGISTRATIONS` 
+WHERE role LIKE '%PROFESSIONAL%' AND report_type = 'Зарегистрированный пользователь (установлен пароль)')
+
+
+SELECT
+user_code
+FROM
+page_view LEFT JOIN 
+sessions ON dimension4 = session_id LEFT JOIN
+user ON user_id = dimension1 LEFT JOIN 
+pg_reg ON  dimension2 = user_code
+WHERE page_fst_date < report_datetime AND EXTRACT(YEAR FROM report_datetime) = 2022 AND EXTRACT(MONTH FROM report_datetime) = 4
+GROUP BY 1)
+
+SELECT * FROM A
+
+INTERSECT DISTINCT -- OR SELECT * FROM A INNER JOIN B USING(user_code)
+
+SELECT * FROM B
