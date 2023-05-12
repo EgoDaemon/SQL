@@ -1,0 +1,45 @@
+WITH 
+
+events AS (
+SELECT
+DATE(event_time) as event_date,
+platform,
+appsflyer_id
+FROM t_dm_x5m_appsflyer_hits_prod
+WHERE event_name NOT LIKE 'first_open'
+GROUP BY DATE(event_time), platform, appsflyer_id),
+
+installs AS (
+SELECT
+MIN(DATE(install_time)) as install_date,
+appsflyer_id
+FROM t_dm_x5m_appsflyer_hits_prod
+GROUP BY appsflyer_id),
+
+joined AS (
+SELECT
+* 
+FROM events 
+LEFT JOIN installs USING(appsflyer_id) 
+ORDER BY appsflyer_id),
+
+diff AS (
+SELECT *, (event_date - install_date) as diff FROM joined),
+
+common AS (
+SELECT diff, platform, uniqExact(appsflyer_id) as cnt_users from diff
+where diff >= 0 -- фильтруем отрицательные значения 
+group by platform, diff 
+ORDER BY diff, platform)--,
+
+--sub AS (
+SELECT
+diff,
+platform,
+cnt_users,
+first_value(cnt_users) over(partition by platform order by diff) as fv,
+cnt_users / first_value(cnt_users) over(partition by platform order by diff) as percent
+FROM common
+ORDER BY diff, platform--)
+
+--select platform, sum(percent) as ltv from sub group by platform // лтв через интеграл
