@@ -1,0 +1,52 @@
+WITH
+
+dau_ios AS
+
+(select
+    platform,
+    count(distinct appsflyer_id) 
+    as active_users
+from
+    t_dm_x5m_appsflyer_hits_prod
+where
+    date(CAST(event_time AS DATE)) = yesterday()
+    Group by platform),
+    
+wau_ios AS
+    
+(select
+    platform,
+    count(distinct appsflyer_id) as active_users
+from
+    t_dm_x5m_appsflyer_hits_prod
+where
+    date(CAST(event_time AS DATE)) 
+    	between date_sub(DAY, 6, yesterday()) AND yesterday()
+    	 Group by platform),
+
+mau_ios AS 
+
+(select
+    platform,
+    count(distinct appsflyer_id) as active_users
+from
+    t_dm_x5m_appsflyer_hits_prod
+where
+    date(CAST(event_time AS DATE)) 
+    	between date_sub(DAY, 30, yesterday()) AND yesterday() Group by platform),
+    	
+dm AS (
+select
+    mau_ios.platform as platform, mau_ios.active_users, dau_ios.active_users 
+    from dau_ios left join mau_ios on dau_ios.platform = mau_ios.platform),
+
+solve AS (    
+select * from dm 
+    left join wau_ios using(platform))
+
+SELECT 
+    platform,
+    round(((active_users / wau_ios.active_users) * 100), 2) as weekly_SF,
+    round(((active_users / mau_ios.active_users) * 100), 2) as monthly_SF,
+    (CASE when platform = 'ios' THEN '9.4%' ELSE '9.8%'  END) as monthly_appslflyer_bm_food_and_drinks
+FROM solve
