@@ -1,0 +1,47 @@
+(select 'DAU' period,
+                      platform,
+                      count(distinct appsflyer_id) as active_users
+         from t_dm_x5m_appsflyer_hits_prod
+         where date(CAST(event_time AS DATE)) = yesterday()
+           AND platform = 'ios'
+         Group by platform)
+      UNION ALL
+        (select 'WAU' period,
+                      platform,
+                      count(distinct appsflyer_id) as active_users
+         from t_dm_x5m_appsflyer_hits_prod
+         where date(CAST(event_time AS DATE)) between date_sub(DAY, 6, yesterday()) AND yesterday()
+           AND platform = 'ios'
+         Group by platform)
+      UNION ALL
+        (select 'MAU' period,
+                      platform,
+                      count(distinct appsflyer_id) as active_users
+         from t_dm_x5m_appsflyer_hits_prod
+         where date(CAST(event_time AS DATE)) between date_sub(DAY, 30, yesterday()) AND yesterday()
+           AND platform = 'ios'
+         Group by platform)
+      UNION ALL
+        (select 'DAU' period,
+                      platform,
+                      count(distinct appsflyer_id) as active_users
+         from t_dm_x5m_appsflyer_hits_prod
+         where date(CAST(event_time AS DATE)) = yesterday()
+           AND platform = 'android'
+         Group by platform)
+      UNION ALL
+        (select 'WAU' period,
+                      platform,
+                      count(distinct appsflyer_id) as active_users
+         from t_dm_x5m_appsflyer_hits_prod
+         where date(CAST(event_time AS DATE)) between date_sub(DAY, 6, yesterday()) AND yesterday()
+           AND platform = 'android'
+         Group by platform)
+      UNION ALL
+        (select 'MAU' period,
+                      platform,
+                      count(distinct appsflyer_id) as active_users
+         from t_dm_x5m_appsflyer_hits_prod
+         where date(CAST(event_time AS DATE)) between date_sub(DAY, 30, yesterday()) AND yesterday()
+           AND platform LIKE 'android'
+         Group by platform)
