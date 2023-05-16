@@ -1,0 +1,60 @@
+—— FOR CLICKHOUSE
+
+WITH names_days AS (
+select *,
+if(neighbor(appsflyer_id, 1, NULL) != appsflyer_id, NULL, neighbor(event_date, 1, NULL)) AS next_event_date
+
+from (
+SELECT  DISTINCT
+        platform,
+        DATE(event_time) as event_date,
+        appsflyer_id
+    FROM t_dm_x5m_appsflyer_hits_prod 
+    group by platform,
+        DATE(event_time) as event_date,
+        appsflyer_id
+    order by appsflyer_id, event_date asc) ttt order by appsflyer_id, event_date asc),
+    
+main AS (
+    SELECT
+        *,
+        dateDiff('day', event_date, next_event_date) AS days_till_next_event
+    FROM names_days
+)
+
+SELECT
+    event_date,
+    COUNT(DISTINCT IF(days_till_next_event < 28, NULL, appsflyer_id)) / COUNT(DISTINCT appsflyer_id) AS churn_rate
+FROM main
+WHERE 1 = 1
+      AND event_date <= (SELECT dateSub(MAX(DATE(event_time)), INTERVAL 28 DAY) FROM t_dm_x5m_appsflyer_hits_prod)
+GROUP BY 1
+ORDER BY 1
+
+
+———FOR BIGQUERY
+
+WITH names_days AS (
+    SELECT DISTINCT
+        platform,
+        date,
+        appsflyer_id,
+        LEAD(date) OVER(PARTITION BY appsflyer_id ORDER BY date) AS next_event_date
+    FROM `foodru-a879e.DM.t_dm_appsflyer_events_prod` 
+),
+
+main AS (
+    SELECT
+        *,
+        DATE_DIFF(next_event_date, date, DAY) AS days_till_next_event
+    FROM names_days
+)
+
+SELECT
+    date,
+    COUNT(DISTINCT IF(days_till_next_event < 28, NULL, appsflyer_id)) / COUNT(DISTINCT appsflyer_id) AS churn_rate
+FROM main
+WHERE 1 = 1
+      AND date <= (SELECT DATE_SUB(MAX(date), INTERVAL 28 DAY) FROM `foodru-a879e.DM.t_dm_appsflyer_events_prod` )
+GROUP BY 1
+ORDER BY 1
